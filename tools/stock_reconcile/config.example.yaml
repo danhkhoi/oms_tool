@@ -1,0 +1,14 @@
+oms:
+  base_url: ${OMS_BASE_URL}
+  api_key: ${OMS_API_KEY}
+  timeout_seconds: 30
+
+dwh:
+  dsn: ${DWH_DSN}
+  schema: public
+  timeout_seconds: 60
+
+options:
+  timezone: ${TZ:-UTC}
+  output_dir: ./out
+  tolerance: 0.0

@@ -1,0 +1,29 @@
+# General
+.DS_Store
+.env
+.env.*
+*.log
+out/
+.tmp/
+.cache/
+
+# Node
+node_modules/
+*.tsbuildinfo
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Go
+bin/
+
+# macOS
+.AppleDouble
+.LSOverride
+Icon?
+
+# Containers
+*.tar

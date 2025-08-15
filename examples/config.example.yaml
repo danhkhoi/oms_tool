@@ -1,0 +1,21 @@
+# Example config for tools
+# Values are sourced from environment variables; do not hardcode secrets.
+
+# OMS API
+oms:
+  base_url: ${OMS_BASE_URL}
+  api_key: ${OMS_API_KEY}
+  timeout_seconds: 30
+
+# DWH (e.g., Postgres, Snowflake)
+dwh:
+  dsn: ${DWH_DSN}
+  schema: public
+  timeout_seconds: 60
+
+# Global options
+options:
+  timezone: ${TZ:-UTC}
+  output_dir: ./out
+  # default tolerance for comparisons (fraction)
+  tolerance: 0.0
