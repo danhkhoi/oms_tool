@@ -66,6 +66,8 @@ def stream_filter_csv(
     output_csv: str,
     article_col: str,
     match_values: Set[str],
+    plant_col: Optional[str],
+    plant_values: Optional[Set[str]],
     select_columns: Optional[List[str]],
     case_insensitive: bool,
     invert: bool,
@@ -87,6 +89,10 @@ def stream_filter_csv(
             raise ValueError(
                 f"Input CSV missing required column '{article_col}'. Found: {reader.fieldnames}"
             )
+        if plant_values and plant_col and plant_col not in (reader.fieldnames or []):
+            raise ValueError(
+                f"Input CSV missing required column '{plant_col}' for plant filter. Found: {reader.fieldnames}"
+            )
 
         # Determine output columns
         if select_columns and select_columns != ["*"]:
@@ -101,6 +107,12 @@ def stream_filter_csv(
             raw_val = (row.get(article_col) or "").strip()
             key = raw_val.lower() if case_insensitive else raw_val
             is_match = key in match_values if key else False
+
+            # Apply plant filter if provided
+            if is_match and plant_values is not None and plant_col:
+                plant_raw = (row.get(plant_col) or "").strip()
+                plant_key = plant_raw.lower() if case_insensitive else plant_raw
+                is_match = plant_key in plant_values if plant_key else False
             if invert:
                 keep = not is_match
             else:
@@ -123,6 +135,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--csv-article-column",
         default="article",
         help="Column name in input CSV that contains SKU/article (default: article)",
+    )
+    parser.add_argument(
+        "--csv-plant-column",
+        default="plant",
+        help="Column name in input CSV that contains plant/location (default: plant)",
     )
     parser.add_argument(
         "--sku",
@@ -153,6 +170,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         action="store_true",
         help="Invert selection (exclude matching rows instead of include)",
     )
+    parser.add_argument(
+        "--plant",
+        action="append",
+        help="Plant/location value to include; can be passed multiple times",
+    )
 
     args = parser.parse_args(argv)
 
@@ -170,6 +192,14 @@ def main(argv: Optional[List[str]] = None) -> int:
             )
             return 2
 
+        plant_values: Optional[Set[str]] = None
+        if args.plant:
+            plant_values = set(
+                (p.strip().lower() if args.case_insensitive else p.strip())
+                for p in args.plant
+                if p and p.strip()
+            ) or None
+
         cols = [c.strip() for c in args.columns.split(",")] if args.columns else ["*"]
         if len(cols) == 1 and cols[0] == "*":
             cols = ["*"]
@@ -179,6 +209,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             output_csv=args.output_csv,
             article_col=args.csv_article_column,
             match_values=match_values,
+            plant_col=args.csv_plant_column,
+            plant_values=plant_values,
             select_columns=None if cols == ["*"] else cols,
             case_insensitive=args.case_insensitive,
             invert=args.invert,
