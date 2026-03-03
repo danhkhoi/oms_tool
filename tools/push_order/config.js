@@ -56,99 +56,110 @@ const ITEM_DEFAULTS = {
 // using today's date, so you can re-run it any day).
 
 const SCENARIOS = [
-    // ── Row 2 ──
+    // ── Row 1 ──
     {
-        name: 'Sydney Standard - SIO',
+        name: 'Australia Post Standard Sydney - SIO',
         sio_mio: 'SIO',
-        allocated_3pl: 'Sydney Standard',
+        allocated_3pl: 'Australia Post Standard Sydney',
         shipment_provider: 'Australia Post Standard',
         fk_catalog_shipment_type: '1',
-        customer_cutoff: '20:00',   // orders placed before this → same-day processing
+        customer_cutoff: '20:00',
         ordersBeforeCutoff: 5,
         ordersAfterCutoff: 5,
     },
-    // ── Row 3 ──
+    // ── Row 2 ──
     {
-        name: 'Sydney Express - MIO',
+        name: 'Australia Post Express Sydney - MIO',
         sio_mio: 'MIO',
-        allocated_3pl: 'Sydney Express',
+        allocated_3pl: 'Australia Post Express Sydney',
         shipment_provider: 'Australia Post Express',
         fk_catalog_shipment_type: '2',
         customer_cutoff: '20:00',
         ordersBeforeCutoff: 5,
         ordersAfterCutoff: 5,
     },
-    // ── Row 4 ──
+    // ── Row 3 ──
     {
-        name: 'Melbourne Standard - MIO',
+        name: 'Australia Post Standard Melbourne - MIO',
         sio_mio: 'MIO',
-        allocated_3pl: 'Melbourne Standard',
+        allocated_3pl: 'Australia Post Standard Melbourne',
         shipment_provider: 'Australia Post Standard',
         fk_catalog_shipment_type: '1',
+        customer_cutoff: '13:00',
+        ordersBeforeCutoff: 5,
+        ordersAfterCutoff: 5,
+    },
+    // ── Row 4 ──
+    {
+        name: 'Australia Post Express Melbourne - SIO',
+        sio_mio: 'SIO',
+        allocated_3pl: 'Australia Post Express Melbourne',
+        shipment_provider: 'Australia Post Express',
+        fk_catalog_shipment_type: '2',
         customer_cutoff: '13:00',
         ordersBeforeCutoff: 5,
         ordersAfterCutoff: 5,
     },
     // ── Row 5 ──
     {
-        name: 'Melbourne Express - SIO',
+        name: 'Australia Post Standard Brisbane - SIO',
         sio_mio: 'SIO',
-        allocated_3pl: 'Melbourne Express',
-        shipment_provider: 'Australia Post Express',
-        fk_catalog_shipment_type: '2',
-        customer_cutoff: '13:00',
+        allocated_3pl: 'Australia Post Standard Brisbane',
+        shipment_provider: 'Australia Post Standard',
+        fk_catalog_shipment_type: '1',
+        customer_cutoff: '12:00',
         ordersBeforeCutoff: 5,
         ordersAfterCutoff: 5,
     },
     // ── Row 6 ──
     {
-        name: 'Brisbane Standard - SIO',
-        sio_mio: 'SIO',
-        allocated_3pl: 'Brisbane Standard',
-        shipment_provider: 'Australia Post Standard',
-        fk_catalog_shipment_type: '1',
+        name: 'Australia Post Express Brisbane - MIO',
+        sio_mio: 'MIO',
+        allocated_3pl: 'Australia Post Express Brisbane',
+        shipment_provider: 'Australia Post Express',
+        fk_catalog_shipment_type: '2',
         customer_cutoff: '12:00',
         ordersBeforeCutoff: 5,
         ordersAfterCutoff: 5,
     },
     // ── Row 7 ──
     {
-        name: 'Brisbane Express - MIO',
+        name: 'Australia Post Standard Interstate - MIO',
         sio_mio: 'MIO',
-        allocated_3pl: 'Brisbane Express',
-        shipment_provider: 'Australia Post Express',
-        fk_catalog_shipment_type: '2',
-        customer_cutoff: '12:00',
-        ordersBeforeCutoff: 5,
-        ordersAfterCutoff: 5,
-    },
-    // ── Row 8 ──
-    {
-        name: 'Interstate Standard - MIO',
-        sio_mio: 'MIO',
-        allocated_3pl: 'Interstate Standard',
+        allocated_3pl: 'Australia Post Standard Interstate',
         shipment_provider: 'Australia Post Standard',
         fk_catalog_shipment_type: '1',
         customer_cutoff: '15:00',
         ordersBeforeCutoff: 5,
         ordersAfterCutoff: 5,
     },
-    // ── Row 9 ──
+    // ── Row 8 ──
     {
-        name: 'Interstate Express - SIO',
+        name: 'Australia Post Express Interstate - SIO',
         sio_mio: 'SIO',
-        allocated_3pl: 'Interstate Express',
+        allocated_3pl: 'Australia Post Express Interstate',
         shipment_provider: 'Australia Post Express',
         fk_catalog_shipment_type: '2',
         customer_cutoff: '15:00',
         ordersBeforeCutoff: 5,
         ordersAfterCutoff: 5,
     },
+    // ── Row 9 ──
+    {
+        name: 'Melbourne/Victoria Startrack Twilight - SIO',
+        sio_mio: 'SIO',
+        allocated_3pl: 'Melbourne/Victoria Startrack Twilight',
+        shipment_provider: 'Australia Post Standard',
+        fk_catalog_shipment_type: '1',
+        customer_cutoff: '08:00',
+        ordersBeforeCutoff: 5,
+        ordersAfterCutoff: 5,
+    },
     // ── Row 10 ──
     {
-        name: 'Interstate Twilight - SIO',
-        sio_mio: 'SIO',
-        allocated_3pl: 'Interstate Twilight',
+        name: 'Brisbane/Queensland Startrack Twilight - MIO',
+        sio_mio: 'MIO',
+        allocated_3pl: 'Brisbane/Queensland Startrack Twilight',
         shipment_provider: 'Australia Post Standard',
         fk_catalog_shipment_type: '1',
         customer_cutoff: '08:00',
@@ -157,9 +168,9 @@ const SCENARIOS = [
     },
     // ── Row 11 ──
     {
-        name: 'Sydney Twilight - MIO',
+        name: 'Startrack Twilight Delivery - MIO',
         sio_mio: 'MIO',
-        allocated_3pl: 'Sydney Twilight',
+        allocated_3pl: 'Startrack Twilight Delivery',
         shipment_provider: 'Australia Post Standard',
         fk_catalog_shipment_type: '1',
         customer_cutoff: '14:00',
@@ -168,9 +179,9 @@ const SCENARIOS = [
     },
     // ── Row 12 ──
     {
-        name: 'Sydney 3 Hour - MIO',
+        name: 'Startrack 3 Hour Delivery - MIO',
         sio_mio: 'MIO',
-        allocated_3pl: 'Sydney 3 Hour',
+        allocated_3pl: 'Startrack 3 Hour Delivery',
         shipment_provider: 'Australia Post Express',
         fk_catalog_shipment_type: '2',
         customer_cutoff: '14:00',
@@ -179,9 +190,9 @@ const SCENARIOS = [
     },
     // ── Row 13 ──
     {
-        name: 'Sydney Saturday - SIO',
+        name: 'Startrack Saturday Delivery - SIO',
         sio_mio: 'SIO',
-        allocated_3pl: 'Sydney Saturday',
+        allocated_3pl: 'Startrack Saturday Delivery',
         shipment_provider: 'Australia Post Standard',
         fk_catalog_shipment_type: '1',
         customer_cutoff: '13:00',
@@ -190,9 +201,9 @@ const SCENARIOS = [
     },
     // ── Row 14 ──
     {
-        name: 'New Zealand Standard - MIO',
+        name: 'Australia Post New Zealand - MIO',
         sio_mio: 'MIO',
-        allocated_3pl: 'New Zealand Standard',
+        allocated_3pl: 'Australia Post New Zealand',
         shipment_provider: 'NZ Post Standard',
         fk_catalog_shipment_type: '1',
         customer_cutoff: '07:00',
@@ -223,9 +234,9 @@ const SCENARIOS = [
     },
     // ── Row 17 ──
     {
-        name: 'DHL Express - MIO',
+        name: 'DHL Express New Zealand - MIO',
         sio_mio: 'MIO',
-        allocated_3pl: 'DHL Express',
+        allocated_3pl: 'DHL Express New Zealand',
         shipment_provider: 'DHL Express',
         fk_catalog_shipment_type: '2',
         customer_cutoff: '12:00',
@@ -234,9 +245,9 @@ const SCENARIOS = [
     },
     // ── Row 18 ──
     {
-        name: 'ParcelPoint - MIO',
+        name: 'Parcelpoint - MIO',
         sio_mio: 'MIO',
-        allocated_3pl: 'ParcelPoint',
+        allocated_3pl: 'Parcelpoint',
         shipment_provider: 'ParcelPoint',
         fk_catalog_shipment_type: '1',
         customer_cutoff: '12:00',

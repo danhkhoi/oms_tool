@@ -2,7 +2,46 @@
 
 Pushes test orders to RabbitMQ (`salesorder` exchange, `bob.au.new` routing key) to test OMS cut-off time behaviour across all 3PLs.
 
-## Setup
+## Prerequisites
+
+Before running this tool, you need an active RabbitMQ tunnel via AWS SSM port forwarding. The script connects to `localhost:5671`, so the tunnel must be open first.
+
+**Step 1 — Install dependencies (first time only)**
+
+```bash
+# AWS CLI
+brew install awscli
+
+# AWS Session Manager Plugin
+brew install --cask session-manager-plugin
+
+# Python deps for the tunnel script
+cd ../rabbitmq_connect
+pip install -r requirements-rabbitmq.txt
+```
+
+**Step 2 — Open the RabbitMQ tunnel (keep this terminal open)**
+
+Connect to staging:
+```bash
+cd ../rabbitmq_connect
+python rabbitmq_connect.py --env staging
+```
+
+Connect to production:
+```bash
+cd ../rabbitmq_connect
+python rabbitmq_connect.py
+python rabbitmq_connect.py --amqp
+```
+
+The script will handle AWS SSO login automatically. Leave this terminal running — it forwards RabbitMQ traffic to `localhost:5671`.
+
+```bash
+python3 rabbitmq_connect.py --env staging --amqp
+```
+
+**Step 3 — Install Node dependencies (first time only)**
 
 ```bash
 npm install
@@ -34,25 +73,26 @@ node push_order.js --scenario "Brisbane" --sku BO646SA49HAK-579990 --dry-run
 
 Each scenario maps to one row in the spreadsheet:
 
-| # | 3PL | SIO/MIO | Customer cutoff |
-|---|-----|---------|-----------------|
-| 0 | Sydney Standard | SIO | 20:00 |
-| 1 | Sydney Express | MIO | 20:00 |
-| 2 | Melbourne Standard | MIO | 13:00 |
-| 3 | Melbourne Express | SIO | 13:00 |
-| 4 | Brisbane Standard | SIO | 12:00 |
-| 5 | Brisbane Express | MIO | 12:00 |
-| 6 | Interstate Standard | MIO | 15:00 |
-| 7 | Interstate Express | SIO | 15:00 |
-| 8 | Interstate Twilight | SIO | 08:00 |
-| 9 | Sydney Twilight | MIO | 14:00 |
-| 10 | Sydney 3 Hour | MIO | 14:00 |
-| 11 | Sydney Saturday | SIO | 13:00 |
-| 12 | New Zealand Standard | MIO | 07:00 |
-| 13 | TGE Standard | SIO | 15:00 |
-| 14 | TGE Express | SIO | 15:00 |
-| 15 | DHL Express | MIO | 12:00 |
-| 16 | ParcelPoint | MIO | 12:00 |
+| # | Allocated 3PL in BOB | SIO/MIO | Customer cutoff |
+|---|----------------------|---------|-----------------|
+| 0 | Australia Post Standard Sydney | SIO | 20:00 |
+| 1 | Australia Post Express Sydney | MIO | 20:00 |
+| 2 | Australia Post Standard Melbourne | MIO | 13:00 |
+| 3 | Australia Post Express Melbourne | SIO | 13:00 |
+| 4 | Australia Post Standard Brisbane | SIO | 12:00 |
+| 5 | Australia Post Express Brisbane | MIO | 12:00 |
+| 6 | Australia Post Standard Interstate | MIO | 15:00 |
+| 7 | Australia Post Express Interstate | SIO | 15:00 |
+| 8 | Melbourne/Victoria Startrack Twilight | SIO | 08:00 |
+| 9 | Brisbane/Queensland Startrack Twilight | MIO | 08:00 |
+| 10 | Startrack Twilight Delivery | MIO | 14:00 |
+| 11 | Startrack 3 Hour Delivery | MIO | 14:00 |
+| 12 | Startrack Saturday Delivery | SIO | 13:00 |
+| 13 | Australia Post New Zealand | MIO | 07:00 |
+| 14 | TGE Standard | SIO | 15:00 |
+| 15 | TGE Express | SIO | 15:00 |
+| 16 | DHL Express New Zealand | MIO | 12:00 |
+| 17 | Parcelpoint | MIO | 12:00 |
 
 For each scenario, **5 orders are created before** the customer cut-off and **5 orders after**. The `created_at` field on the order and item is set relative to today's cut-off time:
 - Before: starting 60 min before cutoff, 5 min apart

@@ -1,7 +1,7 @@
 'use strict';
 
 const amqp = require('amqplib');
-const { CONNECTION_URL, RABBITMQ_SERVERNAME, DEFAULT_SKU, DEFAULT_SKUS, ITEM_DEFAULTS, SCENARIOS } = require('./config');
+const { CONNECTION_URL, RABBITMQ_SERVERNAME, DEFAULT_SKUS, ITEM_DEFAULTS, SCENARIOS } = require('./config');
 
 // ─── CLI args ─────────────────────────────────────────────────────────────────
 // Usage:
@@ -18,7 +18,7 @@ const getArg = (flag) => {
 };
 
 const DRY_RUN = args.includes('--dry-run');
-const SKU = getArg('--sku') || DEFAULT_SKU;
+const SKU = getArg('--sku') || null;
 const SCENARIO_FILTER = getArg('--scenario'); // index or name
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -53,12 +53,14 @@ const randomCustomer = () => {
  * Build a "YYYY-MM-DD HH:MM:SS" timestamp.
  * @param {Date} date
  */
-const toTimestamp = (date) =>
-    date.toISOString().slice(0, 19).replace('T', ' ');
+const toTimestamp = (date) => {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
 
 /**
  * Given today's date and a "HH:MM" cut-off string, return a Date set to that
- * time today (local time converted to UTC for publishing).
+ * time today (no timezone conversion — times are kept as-is).
  */
 const cutoffDate = (hhMM) => {
     const [hh, mm] = hhMM.split(':').map(Number);
@@ -82,6 +84,8 @@ const buildOrderPayload = (scenario, sku, createdAt, customer) => {
     const orderNr = `T${ts}`;
     const itemId = `${ts}`;
 
+    const cutoffTs = orderTimestamp(cutoffDate(scenario.customer_cutoff), 0);
+
     const item = {
         id_sales_order_item: itemId,
         fk_sales_order_item_status: 1,
@@ -97,6 +101,7 @@ const buildOrderPayload = (scenario, sku, createdAt, customer) => {
         supplier_identifier: ITEM_DEFAULTS.supplier_identifier,
         is_marketplace: ITEM_DEFAULTS.is_marketplace ? 1 : 0,
         shipment_provider: scenario.shipment_provider,
+        pickup_cutoff: cutoffTs,
     };
 
     return {
@@ -167,7 +172,7 @@ const publishOrder = async (connection, payload) => {
 // ─── SKU cycling counter ───────────────────────────────────────────────────────
 let skuIndex = 0;
 const nextSku = (overrideSku) => {
-    if (overrideSku !== DEFAULT_SKU) return overrideSku; // honour --sku flag
+    if (overrideSku) return overrideSku; // honour --sku flag
     const sku = DEFAULT_SKUS[skuIndex % DEFAULT_SKUS.length];
     skuIndex++;
     return sku;
@@ -255,7 +260,7 @@ const main = async () => {
     console.log(`\n${'='.repeat(60)}`);
     console.log(`Push Order Tool`);
     console.log(`${'='.repeat(60)}`);
-    console.log(`SKUs     : ${SKU !== DEFAULT_SKU ? SKU : DEFAULT_SKUS.join(', ')}`);
+    console.log(`SKUs     : ${SKU ? SKU : DEFAULT_SKUS.join(', ')}`);
     console.log(`Dry-run  : ${DRY_RUN}`);
     console.log(`Scenarios: ${scenariosToRun.length}`);
     if (DRY_RUN) {
