@@ -58,6 +58,8 @@ class RabbitMQConnector:
         self.rabbitmq_host = self.config['rabbitmq_host']
         self.remote_port = 443
         self.local_port = 8443
+        self.amqp_remote_port = 5671
+        self.amqp_local_port = 5671
 
     def get_aws_config_path(self) -> Path:
         """Get AWS config file path."""
@@ -283,40 +285,37 @@ class RabbitMQConnector:
             print(f"\nMake sure you've logged in with: aws sso login --profile {self.profile}")
             return None
 
-    def start_port_forwarding(self, instance_id: str) -> int:
+    def start_port_forwarding(self, instance_id: str, amqp: bool = False) -> int:
         """
         Start SSM port forwarding session to RabbitMQ.
 
-        Flow:
-        1. Execute 'aws ssm start-session' with port forwarding parameters
-        2. SSM connects to the EC2 instance (no SSH keys needed)
-        3. EC2 instance forwards traffic to RabbitMQ host on port 443
-        4. Local port 8443 is mapped to the remote RabbitMQ port
-        5. Session remains active until Ctrl+C or connection drops
-
         Architecture:
-        [Your Computer:8443] → [SSM] → [EC2 Instance] → [RabbitMQ:443]
-
-        Security benefits:
-        - No public IP or inbound security group rules needed
-        - No SSH keys to manage
-        - All traffic encrypted through AWS SSM
-        - IAM-based authentication and authorization
+        Management UI: [Your Computer:8443] → [SSM] → [EC2 Instance] → [RabbitMQ:443]
+        AMQP:          [Your Computer:5671] → [SSM] → [EC2 Instance] → [RabbitMQ:5671]
 
         Args:
             instance_id: EC2 instance ID to use as bastion
+            amqp: If True, tunnel the AMQP port (5671) instead of management UI (443)
 
         Returns:
             Exit code from the SSM session
         """
-        # Build the AWS SSM command with port forwarding parameters
+        if amqp:
+            remote_port = self.amqp_remote_port
+            local_port = self.amqp_local_port
+            label = f"AMQP (amqps://localhost:{local_port})"
+        else:
+            remote_port = self.remote_port
+            local_port = self.local_port
+            label = f"Management UI (https://localhost:{local_port})"
+
         cmd = [
             'aws', 'ssm', 'start-session',
             '--target', instance_id,
             '--document-name', 'AWS-StartPortForwardingSessionToRemoteHost',
             '--profile', self.profile,
             '--region', self.region,
-            '--parameters', f'{{"host":["{self.rabbitmq_host}"],"portNumber":["{self.remote_port}"],"localPortNumber":["{self.local_port}"]}}'
+            '--parameters', f'{{"host":["{self.rabbitmq_host}"],"portNumber":["{remote_port}"],"localPortNumber":["{local_port}"]}}'
         ]
 
         print(f"\n{'='*60}")
@@ -324,12 +323,11 @@ class RabbitMQConnector:
         print(f"{'='*60}")
         print(f"Environment:  {self.environment}")
         print(f"Profile:      {self.profile}")
-        print(f"RabbitMQ URL: https://localhost:{self.local_port}")
+        print(f"Forwarding:   {label}")
         print(f"{'='*60}\n")
         print("Press Ctrl+C to terminate the session.\n")
 
         try:
-            # This is a blocking call - runs until terminated
             result = subprocess.run(cmd)
             return result.returncode
         except KeyboardInterrupt:
@@ -339,29 +337,12 @@ class RabbitMQConnector:
             print(f"Error starting port forwarding: {e}")
             return 1
 
-    def connect(self):
+    def connect(self, amqp: bool = False):
         """
         Main method to establish connection to RabbitMQ.
 
-        Complete Flow:
-        ┌─────────────────────────────────────────────────────────────┐
-        │ STEP 1: AWS SSO Setup & Authentication                      │
-        │ ├─ Check if profile exists in ~/.aws/config                 │
-        │ ├─ Configure profile if needed (one-time setup)             │
-        │ └─ Validate/refresh SSO session (browser auth if expired)   │
-        └─────────────────────────────────────────────────────────────┘
-                                    ↓
-        ┌─────────────────────────────────────────────────────────────┐
-        │ STEP 2: Find EC2 Bastion Instance                           │
-        │ └─ Query EC2 API for running 'owms*cron*' instance          │
-        └─────────────────────────────────────────────────────────────┘
-                                    ↓
-        ┌─────────────────────────────────────────────────────────────┐
-        │ STEP 3: Establish Port Forwarding                           │
-        │ └─ Start SSM session: localhost:8443 → EC2 → RabbitMQ:443   │
-        └─────────────────────────────────────────────────────────────┘
-
-        After successful connection, access RabbitMQ at https://localhost:8443
+        Args:
+            amqp: If True, tunnel AMQP port 5671. If False, tunnel management UI port 443→8443.
         """
         print(f"\n{'='*60}")
         print(f"RabbitMQ Connection - {self.environment.upper()} Environment")
@@ -380,7 +361,7 @@ class RabbitMQConnector:
             sys.exit(1)
 
         # STEP 3: Start the port forwarding session (blocking call)
-        return self.start_port_forwarding(instance_id)
+        return self.start_port_forwarding(instance_id, amqp=amqp)
 
 
 def main():
@@ -411,11 +392,18 @@ Available environments:
         help='Environment to connect to (default: production)'
     )
 
+    parser.add_argument(
+        '--amqp',
+        action='store_true',
+        default=False,
+        help='Tunnel AMQP port 5671 instead of management UI port 443 (needed for push_order.js)'
+    )
+
     args = parser.parse_args()
 
     try:
         connector = RabbitMQConnector(environment=args.environment)
-        sys.exit(connector.connect())
+        sys.exit(connector.connect(amqp=args.amqp))
     except ValueError as e:
         print(f"Error: {e}")
         sys.exit(1)

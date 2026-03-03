@@ -1,0 +1,13 @@
+{
+  "name": "push-order",
+  "version": "1.0.0",
+  "description": "Push test orders to RabbitMQ for OMS cut-off time testing",
+  "main": "push_order.js",
+  "scripts": {
+    "start": "node push_order.js",
+    "dry-run": "node push_order.js --dry-run"
+  },
+  "dependencies": {
+    "amqplib": "^0.10.3"
+  }
+}

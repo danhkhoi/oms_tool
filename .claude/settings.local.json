@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat node_modules/amqplib/package.json)",
+      "Bash(cat /Users/khoinguyen/project/oms_tool/tools/push_order/node_modules/amqplib/lib/connect.js)"
+    ]
+  }
+}
