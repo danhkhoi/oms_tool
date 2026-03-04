@@ -27,3 +27,6 @@ Icon?
 
 # Containers
 *.tar
+
+
+.claude/
