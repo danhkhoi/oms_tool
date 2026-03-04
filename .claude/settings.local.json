@@ -4,7 +4,16 @@
       "Bash(cat node_modules/amqplib/package.json)",
       "Bash(cat /Users/khoinguyen/project/oms_tool/tools/push_order/node_modules/amqplib/lib/connect.js)",
       "Bash(cd /Users/khoinguyen/project/oms_tool/tools/push_order && node push_order.js --scenario 0 --dry-run)",
-      "Bash(node push_order.js --scenario \"R2 · AU Post Standard Sydney · MIO · 5Mar · Before\" --dry-run)"
+      "Bash(node push_order.js --scenario \"R2 · AU Post Standard Sydney · MIO · 5Mar · Before\" --dry-run)",
+      "mcp__atlassian__getAccessibleAtlassianResources",
+      "mcp__atlassian__search",
+      "mcp__atlassian__getConfluencePage",
+      "mcp__atlassian__getVisibleJiraProjects",
+      "mcp__atlassian__getConfluenceSpaces",
+      "mcp__atlassian__getJiraIssueTypeMetaWithFields",
+      "Bash(cat ~/.claude/skills/vercel-react-best-practices)",
+      "Bash(cat ~/.claude/skills/vercel-react-best-practices/skill.md)",
+      "mcp__atlassian__createJiraIssue"
     ]
   }
 }

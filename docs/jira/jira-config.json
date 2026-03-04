@@ -1,0 +1,99 @@
+{
+  "_comment": "Cached Jira/Confluence IDs for OMS (SEAOPS). Update if fields change.",
+  "_last_synced": "2026-03-04",
+
+  "atlassian": {
+    "cloud_id": "c5ab62f0-1109-4f2e-b41d-d917b58ee31f",
+    "base_url": "https://zalora.atlassian.net"
+  },
+
+  "confluence": {
+    "space_key": "SEAOPS",
+    "space_id": "60162049",
+    "oms_ticket_template_page_id": "73334993",
+    "oms_ticket_template_url": "https://zalora.atlassian.net/wiki/spaces/SEAOPS/pages/73334993/OMS+Ticket+Template",
+    "template_cache_path": "docs/jira/oms-ticket-template.md"
+  },
+
+  "jira": {
+    "project_key": "SEAOPS",
+    "project_id": "12000",
+    "project_name": "OMS",
+
+    "issue_types": {
+      "Bug": "1",
+      "New Feature": "2",
+      "Task": "3",
+      "Improvement": "4",
+      "Sub-task": "5",
+      "Epic": "6",
+      "Tech Spike": "10508"
+    },
+
+    "priorities": {
+      "P0 - Blocker": "1",
+      "P1 - Critical": "2",
+      "P2 - Major": "3",
+      "P3 - Minor": "4",
+      "P4 - Trivial": "5"
+    },
+
+    "components": {
+      "Bumblebee": "16534",
+      "Customer Service & Experience": "16509",
+      "Finance": "16694",
+      "Iconic OWMS SaaS": "16693",
+      "Logistics": "16506",
+      "Marketplace": "16510",
+      "One Stock Solution (1SS)": "16569",
+      "Payment": "16511",
+      "Production": "16508",
+      "Security": "16531",
+      "Strategic OKR": "16532",
+      "Supply Chain": "16507",
+      "Technical": "16530",
+      "Warehouse": "16505"
+    },
+
+    "custom_fields": {
+      "story_points": "customfield_10004",
+      "sprint": "customfield_10007",
+      "qa_test_points": "customfield_10901",
+      "squad": "customfield_12912",
+      "cc_list": "customfield_12965",
+      "impact_product": "customfield_13075"
+    },
+
+    "squad_options": {
+      "Brand Onboarding": "11512",
+      "Campaigns & Promotions": "11516",
+      "Commercial Growth": "11514",
+      "Growth Hacking": "11515",
+      "Homepage & Navigation": "11613",
+      "Logistics": "11511",
+      "Loyalty": "11517",
+      "Martech": "11524",
+      "Payments": "11525",
+      "Post Purchase": "11522",
+      "Product Presentation": "11521",
+      "Production": "11526",
+      "PTC": "11547",
+      "Purchase Experience": "11523",
+      "Search & Personalisation": "11614",
+      "Social Commerce": "11519",
+      "Storefront": "11520",
+      "Technical Reinvent": "11717",
+      "Warehouse & Supply Chain": "11513",
+      "Iconic OWMS SaaS": "12107",
+      "Iconic Automation Integration": "12108",
+      "Iconic Data Pipeline": "12109"
+    },
+
+    "defaults": {
+      "component": "Warehouse",
+      "squad": "Warehouse & Supply Chain",
+      "priority_bug": "P2 - Major",
+      "priority_feature": "P3 - Minor"
+    }
+  }
+}
