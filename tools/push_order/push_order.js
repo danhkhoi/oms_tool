@@ -59,12 +59,13 @@ const toTimestamp = (date) => {
 };
 
 /**
- * Given today's date and a "HH:MM" cut-off string, return a Date set to that
- * time today (no timezone conversion — times are kept as-is).
+ * Given a "HH:MM" cut-off string and an optional ISO date string "YYYY-MM-DD",
+ * return a Date set to that time on that date (or today if no date given).
+ * No timezone conversion — times are kept as local.
  */
-const cutoffDate = (hhMM) => {
+const cutoffDate = (hhMM, isoDate) => {
     const [hh, mm] = hhMM.split(':').map(Number);
-    const d = new Date();
+    const d = isoDate ? new Date(isoDate + 'T00:00:00') : new Date();
     d.setHours(hh, mm, 0, 0);
     return d;
 };
@@ -84,7 +85,10 @@ const buildOrderPayload = (scenario, sku, createdAt, customer) => {
     const orderNr = `T${ts}`;
     const itemId = `${ts}`;
 
-    const cutoffTs = orderTimestamp(cutoffDate(scenario.customer_cutoff), 0);
+    // pickup_cutoff = owms_cutoff time on owms_cutoff_date (after) or created_date (before).
+    const pickupCutoffTime = scenario.owms_cutoff || scenario.customer_cutoff;
+    const pickupCutoffIsoDate = scenario.owms_cutoff_date || createdAt.slice(0, 10);
+    const cutoffTs = orderTimestamp(cutoffDate(pickupCutoffTime, pickupCutoffIsoDate), 0);
 
     const item = {
         id_sales_order_item: itemId,
@@ -100,7 +104,7 @@ const buildOrderPayload = (scenario, sku, createdAt, customer) => {
         fk_catalog_shipment_type: scenario.fk_catalog_shipment_type,
         supplier_identifier: ITEM_DEFAULTS.supplier_identifier,
         is_marketplace: ITEM_DEFAULTS.is_marketplace ? 1 : 0,
-        shipment_provider: scenario.shipment_provider,
+        shipment_provider: scenario.allocated_3pl,
         pickup_cutoff: cutoffTs,
     };
 
@@ -181,15 +185,22 @@ const nextSku = (overrideSku) => {
 // ─── Scenario runner ──────────────────────────────────────────────────────────
 const runScenario = async (connection, scenario, skuOverride) => {
     console.log(`\n${'─'.repeat(60)}`);
-    console.log(`Scenario : ${scenario.name}`);
-    console.log(`3PL      : ${scenario.allocated_3pl} (${scenario.sio_mio})`);
-    console.log(`Provider : ${scenario.shipment_provider}`);
-    console.log(`Cutoff   : ${scenario.customer_cutoff}`);
-    console.log(`SKUs     : cycling [${DEFAULT_SKUS.join(', ')}]`);
-    console.log(`Orders   : ${scenario.ordersBeforeCutoff} before cutoff + ${scenario.ordersAfterCutoff} after cutoff`);
+    console.log(`Scenario    : ${scenario.name}`);
+    console.log(`3PL         : ${scenario.allocated_3pl} (${scenario.sio_mio})`);
+    console.log(`Provider    : ${scenario.allocated_3pl}`);
+    console.log(`Cust. cutoff: ${scenario.customer_cutoff}`);
+    if (scenario.owms_cutoff) {
+        const cutoffDateLabel = scenario.owms_cutoff_date || scenario.created_date || 'today';
+        console.log(`OWMS cutoff : ${scenario.owms_cutoff} on ${cutoffDateLabel}`);
+    }
+    if (scenario.created_date) {
+        console.log(`Created date: ${scenario.created_date} (${scenario.before_after || 'before/after'})`);
+    }
+    console.log(`SKUs        : cycling [${DEFAULT_SKUS.join(', ')}]`);
+    console.log(`Orders      : ${scenario.ordersBeforeCutoff} before cutoff + ${scenario.ordersAfterCutoff} after cutoff`);
     console.log(`${'─'.repeat(60)}`);
 
-    const cutoff = cutoffDate(scenario.customer_cutoff);
+    const cutoff = cutoffDate(scenario.customer_cutoff, scenario.created_date || null);
 
     // ── Orders BEFORE cut-off (60 min before, spaced 5 min apart) ────────────
     console.log(`\n  [BEFORE cut-off]`);
