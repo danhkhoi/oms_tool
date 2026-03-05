@@ -80,41 +80,48 @@ const orderTimestamp = (cutoff, offsetMinutes) => {
 };
 
 // ─── Payload builders ─────────────────────────────────────────────────────────
-const buildOrderPayload = (scenario, sku, createdAt, customer) => {
+const buildOrderPayload = (scenario, skus, createdAt, customer) => {
     const ts = Date.now();
     const orderNr = `T${ts}`;
-    const itemId = `${ts}`;
 
     // pickup_cutoff = owms_cutoff time on owms_cutoff_date (after) or created_date (before).
     const pickupCutoffTime = scenario.owms_cutoff || scenario.customer_cutoff;
     const pickupCutoffIsoDate = scenario.owms_cutoff_date || createdAt.slice(0, 10);
     const cutoffTs = orderTimestamp(cutoffDate(pickupCutoffTime, pickupCutoffIsoDate), 0);
 
-    const item = {
-        id_sales_order_item: itemId,
-        fk_sales_order_item_status: 1,
-        unit_price: ITEM_DEFAULTS.unit_price,
-        tax_amount: ITEM_DEFAULTS.tax_amount,
-        paid_price: parseFloat(ITEM_DEFAULTS.paid_price),
-        name: ITEM_DEFAULTS.name,
-        sku,
-        weight: ITEM_DEFAULTS.weight,
-        created_at: createdAt,
-        updated_at: createdAt,
-        fk_catalog_shipment_type: scenario.fk_catalog_shipment_type,
-        supplier_identifier: ITEM_DEFAULTS.supplier_identifier,
-        is_marketplace: ITEM_DEFAULTS.is_marketplace ? 1 : 0,
-        shipment_provider: scenario.allocated_3pl,
-        pickup_cutoff: cutoffTs,
-    };
+    const skuList = Array.isArray(skus) ? skus : [skus];
+    const salesOrderItems = {};
+    skuList.forEach((sku, idx) => {
+        const itemId = `${ts}${idx}`;
+        salesOrderItems[itemId] = {
+            id_sales_order_item: itemId,
+            fk_sales_order_item_status: 1,
+            unit_price: ITEM_DEFAULTS.unit_price,
+            tax_amount: ITEM_DEFAULTS.tax_amount,
+            paid_price: parseFloat(ITEM_DEFAULTS.paid_price),
+            name: ITEM_DEFAULTS.name,
+            sku,
+            weight: ITEM_DEFAULTS.weight,
+            created_at: createdAt,
+            updated_at: createdAt,
+            fk_catalog_shipment_type: scenario.fk_catalog_shipment_type,
+            supplier_identifier: ITEM_DEFAULTS.supplier_identifier,
+            is_marketplace: ITEM_DEFAULTS.is_marketplace ? 1 : 0,
+            shipment_provider: scenario.allocated_3pl,
+            pickup_cutoff: cutoffTs,
+        };
+    });
+
+    const grandTotal = (parseFloat(ITEM_DEFAULTS.unit_price) * skuList.length).toFixed(2);
+    const totalTax = (parseFloat(ITEM_DEFAULTS.tax_amount) * skuList.length).toFixed(2);
 
     return {
         sales_order: {
             customer_email: customer.email,
             order_nr: orderNr,
-            grand_total: ITEM_DEFAULTS.unit_price,
+            grand_total: grandTotal,
             credit_amount: '0.00',
-            tax_amount: ITEM_DEFAULTS.tax_amount,
+            tax_amount: totalTax,
             shipping_amount: '7.95',
             shipping_method: '1',
             payment_method: 'Iconic_Prepayment',
@@ -146,9 +153,7 @@ const buildOrderPayload = (scenario, sku, createdAt, customer) => {
             customer_address_region_name: customer.region,
         },
         sales_order_payment: [{ created_at: createdAt }],
-        sales_order_item: {
-            [itemId]: item,
-        },
+        sales_order_item: salesOrderItems,
     };
 };
 
@@ -174,12 +179,16 @@ const publishOrder = async (connection, payload) => {
 };
 
 // ─── SKU cycling counter ───────────────────────────────────────────────────────
+const SKUS_PER_ORDER = 3;
 let skuIndex = 0;
-const nextSku = (overrideSku) => {
-    if (overrideSku) return overrideSku; // honour --sku flag
-    const sku = DEFAULT_SKUS[skuIndex % DEFAULT_SKUS.length];
-    skuIndex++;
-    return sku;
+const nextSkus = (overrideSku) => {
+    if (overrideSku) return [overrideSku, overrideSku, overrideSku]; // honour --sku flag (repeat 3 times)
+    const skus = [];
+    for (let i = 0; i < SKUS_PER_ORDER; i++) {
+        skus.push(DEFAULT_SKUS[skuIndex % DEFAULT_SKUS.length]);
+        skuIndex++;
+    }
+    return skus;
 };
 
 // ─── Scenario runner ──────────────────────────────────────────────────────────
@@ -196,7 +205,7 @@ const runScenario = async (connection, scenario, skuOverride) => {
     if (scenario.created_date) {
         console.log(`Created date: ${scenario.created_date} (${scenario.before_after || 'before/after'})`);
     }
-    console.log(`SKUs        : cycling [${DEFAULT_SKUS.join(', ')}]`);
+    console.log(`SKUs        : cycling [${DEFAULT_SKUS.join(', ')}] (${SKUS_PER_ORDER} per order)`);
     console.log(`Orders      : ${scenario.ordersBeforeCutoff} before cutoff + ${scenario.ordersAfterCutoff} after cutoff`);
     console.log(`${'─'.repeat(60)}`);
 
@@ -208,15 +217,15 @@ const runScenario = async (connection, scenario, skuOverride) => {
         // Space orders starting 60 min before cutoff, 5 min apart
         const offset = -60 + i * 5;
         const createdAt = orderTimestamp(cutoff, offset);
-        const sku = nextSku(skuOverride);
+        const skus = nextSkus(skuOverride);
         const customer = randomCustomer();
-        const payload = buildOrderPayload(scenario, sku, createdAt, customer);
+        const payload = buildOrderPayload(scenario, skus, createdAt, customer);
 
         if (DRY_RUN) {
-            console.log(`  [DRY-RUN] order_nr=${payload.sales_order.order_nr} sku=${sku} email=${customer.email} name=${customer.first_name} ${customer.last_name} created_at=${createdAt}`);
+            console.log(`  [DRY-RUN] order_nr=${payload.sales_order.order_nr} skus=[${skus.join(', ')}] email=${customer.email} name=${customer.first_name} ${customer.last_name} created_at=${createdAt}`);
         } else {
             await publishOrder(connection, payload);
-            console.log(`  Published order_nr=${payload.sales_order.order_nr} sku=${sku} email=${customer.email} created_at=${createdAt}`);
+            console.log(`  Published order_nr=${payload.sales_order.order_nr} skus=[${skus.join(', ')}] email=${customer.email} created_at=${createdAt}`);
         }
         await delay(100);
     }
@@ -226,15 +235,15 @@ const runScenario = async (connection, scenario, skuOverride) => {
     for (let i = 0; i < scenario.ordersAfterCutoff; i++) {
         const offset = 5 + i * 5;
         const createdAt = orderTimestamp(cutoff, offset);
-        const sku = nextSku(skuOverride);
+        const skus = nextSkus(skuOverride);
         const customer = randomCustomer();
-        const payload = buildOrderPayload(scenario, sku, createdAt, customer);
+        const payload = buildOrderPayload(scenario, skus, createdAt, customer);
 
         if (DRY_RUN) {
-            console.log(`  [DRY-RUN] order_nr=${payload.sales_order.order_nr} sku=${sku} email=${customer.email} name=${customer.first_name} ${customer.last_name} created_at=${createdAt}`);
+            console.log(`  [DRY-RUN] order_nr=${payload.sales_order.order_nr} skus=[${skus.join(', ')}] email=${customer.email} name=${customer.first_name} ${customer.last_name} created_at=${createdAt}`);
         } else {
             await publishOrder(connection, payload);
-            console.log(`  Published order_nr=${payload.sales_order.order_nr} sku=${sku} email=${customer.email} created_at=${createdAt}`);
+            console.log(`  Published order_nr=${payload.sales_order.order_nr} skus=[${skus.join(', ')}] email=${customer.email} created_at=${createdAt}`);
         }
         await delay(100);
     }

@@ -31,8 +31,8 @@ python rabbitmq_connect.py --env staging
 Connect to production:
 ```bash
 cd ../rabbitmq_connect
-python rabbitmq_connect.py
-python rabbitmq_connect.py --amqp
+python rabbitmq_connect.py --env staging
+python rabbitmq_connect.py --amqp --env staging
 ```
 
 The script will handle AWS SSO login automatically. Leave this terminal running — it forwards RabbitMQ traffic to `localhost:5671`.
