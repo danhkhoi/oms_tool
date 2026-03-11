@@ -1,0 +1,8 @@
+# Sentry error ignore list for OMS staging health check
+# Lines starting with # are comments. One keyword/pattern per line.
+# If any of these strings appear in an issue title, it will be excluded from the report.
+
+# Known infra/config issues on staging (not code regressions)
+Error: Class "Oms_ElasticApm_Apm" not found
+External_Model_Entity_Message_Implementation_Exception_OrderNotFound (2)
+External_Model_Entity_Message_Implementation_Exception_Product_Processing

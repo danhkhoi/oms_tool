@@ -1,7 +1,6 @@
 # General
 .DS_Store
 .env
-.env.*
 *.log
 out/
 .tmp/
@@ -29,4 +28,3 @@ Icon?
 *.tar
 
 
-.claude/
