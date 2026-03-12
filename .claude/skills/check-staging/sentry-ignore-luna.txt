@@ -1,0 +1,5 @@
+# Sentry error ignore list for luna staging health check
+# Lines starting with # are comments. One keyword/pattern per line.
+# If any of these strings appear in an issue title, it will be excluded from the report.
+
+# Add known infra/config noise patterns here

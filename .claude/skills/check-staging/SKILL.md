@@ -1,26 +1,30 @@
 ---
 name: check-staging
-description: Check the health of OMS staging environment for a specific venture (MY, ID, PH, AU) by inspecting recent commits/merged PRs on the venture branch and checking Sentry for new issues. Use when asked to "check staging", "is staging okay", "check health", "what's deployed on staging", or "any issues on staging for [venture]".
+description: Check the health of a staging environment (oms, oms-mobile, or luna) for a specific venture (MY, ID, PH, AU) by inspecting recent commits/merged PRs on the venture branch and checking Sentry for new issues. Use when asked to "check staging", "is staging okay", "check health", "what's deployed on staging", or "any issues on staging for [venture]".
 license: MIT
 metadata:
   author: oms-tool
-  version: "1.3.0"
+  version: "2.0.0"
 ---
 
-# OMS Staging Health Check
+# Staging Health Check
 
-You are helping check the health of the OMS staging environment by inspecting recent Git activity and Sentry errors.
+You are helping check the health of a staging environment by inspecting recent Git activity and Sentry errors.
 
-## Config
+## Repo Config Table
 
-- **GitHub Repo**: `zalora/oms`
+| Key | `oms` | `oms-mobile` | `luna` |
+|-----|-------|--------------|--------|
+| **GitHub repo** | `zalora/oms` | `zalora/oms-mobile` | `zalora/luna` |
+| **Sentry project slug** | `oms` | `oms-mobile` | `luna` |
+| **Sentry country filter** | `country:{venture_lower}` | `country:{venture_lower}` | `country:{venture_lower}` |
+| **Ventures → Branches** | MY→`development-MY`, ID→`development-ID`, PH→`development-PH`, AU→`development-AU` | same | same |
+| **Ignore file** | `sentry-ignore-oms.txt` | `sentry-ignore-oms-mobile.txt` | `sentry-ignore-luna.txt` |
+
 - **Sentry Base URL**: `https://sentry-stg.zalora.net`
 - **Sentry API Base**: `https://sentry-stg.zalora.net/api/0`
-- **Ventures & Branches**:
-  - MY → `development-MY`
-  - ID → `development-ID`
-  - PH → `development-PH`
-  - AU → `development-AU`
+
+All three repos use the same venture-to-branch mapping: `development-{VENTURE}` (e.g. `development-MY`).
 
 ---
 
@@ -115,37 +119,52 @@ If both GitHub and Sentry are missing, **stop here** and ask the user to complet
 
 ---
 
-## Step 1 — Identify Venture & Branch
+## Step 1 — Identify Repo, Venture & Branch
+
+### 1a — Select Repo
+
+If the user did not specify a repo, **ask**:
+> "Which repo do you want to check? (oms / oms-mobile / luna)"
+
+Set from the Repo Config Table:
+- `REPO_KEY` = e.g. `oms`
+- `GITHUB_REPO` = e.g. `zalora/oms`
+- `SENTRY_PROJECT` = e.g. `oms`
+- `SENTRY_IGNORE_FILE` = e.g. `sentry-ignore-oms.txt`
+
+### 1b — Select Venture
 
 If the user did not specify a venture, **ask**:
-> "Which venture do you want to check? (MY / ID / PH / AU)"
+> "Which venture? (MY / ID / PH / AU)"
 
-Also accept a custom branch override if the user provides one (e.g. `feature/xyz`).
+Also accept a custom branch override (e.g. `feature/xyz`).
 
 Set:
 - `VENTURE` = e.g. `MY`
-- `BRANCH` = e.g. `development-MY` (or custom if overridden)
+- `BRANCH` = `development-{VENTURE}` (e.g. `development-MY`), or custom if overridden
 
 ---
 
 ## Step 2 — Fetch Recent GitHub Activity
 
-**Prefer GitHub MCP tools** when available. Fall back to `WebFetch` with REST API if MCP is not installed.
+**Prefer GitHub MCP tools** when available. Fall back to REST API if MCP is not installed.
+
+Split `{GITHUB_REPO}` into `{GITHUB_OWNER}` (e.g. `zalora`) and `{GITHUB_REPO_NAME}` (e.g. `oms`) for MCP calls.
 
 ### 2a — Using GitHub MCP (preferred)
 
 ```
 mcp__github__list_commits
-  owner: "zalora"
-  repo: "oms"
+  owner: "{GITHUB_OWNER}"
+  repo: "{GITHUB_REPO_NAME}"
   sha: "{BRANCH}"
   perPage: 10
 ```
 
 ```
 mcp__github__list_pull_requests
-  owner: "zalora"
-  repo: "oms"
+  owner: "{GITHUB_OWNER}"
+  repo: "{GITHUB_REPO_NAME}"
   base: "{BRANCH}"
   state: "closed"
   sort: "updated"
@@ -156,22 +175,22 @@ mcp__github__list_pull_requests
 For each merged PR (where `merged_at` is not null), optionally fetch file changes:
 ```
 mcp__github__get_pull_request_files
-  owner: "zalora"
-  repo: "oms"
+  owner: "{GITHUB_OWNER}"
+  repo: "{GITHUB_REPO_NAME}"
   pullNumber: {PR_NUMBER}
 ```
 
 ### 2b — Using REST API (fallback if MCP not available)
 
 ```
-GET https://api.github.com/repos/zalora/oms/commits?sha={BRANCH}&per_page=10
+GET https://api.github.com/repos/{GITHUB_REPO}/commits?sha={BRANCH}&per_page=10
 Headers:
   Authorization: Bearer $GITHUB_TOKEN
   Accept: application/vnd.github+json
 ```
 
 ```
-GET https://api.github.com/repos/zalora/oms/pulls?state=closed&base={BRANCH}&per_page=10&sort=updated&direction=desc
+GET https://api.github.com/repos/{GITHUB_REPO}/pulls?state=closed&base={BRANCH}&per_page=10&sort=updated&direction=desc
 ```
 
 ### Extract from each merged PR/commit:
@@ -192,7 +211,7 @@ For each non-merge commit in the recent list, fetch its diff using the REST API:
 curl -s \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
   -H "Accept: application/vnd.github+json" \
-  "https://api.github.com/repos/zalora/oms/commits/{SHA}"
+  "https://api.github.com/repos/{GITHUB_REPO}/commits/{SHA}"
 ```
 
 This returns `files[].patch` — the actual code diff for each changed file.
@@ -204,13 +223,46 @@ Extract from each diff:
 - The `patch` content (actual diff lines) for files with < 300 changed lines
 - For larger files, note the filename and line counts only
 
+### 2d — Read Full Files for Deeper Analysis
+
+After reviewing diffs, fetch the **complete file content** for files that changed in the 5 most recent commits. This allows you to understand the full context around each change and catch issues that are invisible from the diff alone (e.g. missing cases in a switch, callers of a changed function, interface contracts).
+
+Use the GitHub REST API to read a full file at the branch tip:
+
+```bash
+curl -s \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "Accept: application/vnd.github+json" \
+  "https://api.github.com/repos/{GITHUB_REPO}/contents/{FILE_PATH}?ref={BRANCH}" \
+  | python3 -c "import json,sys,base64; d=json.load(sys.stdin); print(base64.b64decode(d['content']).decode())"
+```
+
+**Scope rules — read the full file when:**
+- The changed file is a PHP class, service, or listener (`.php`)
+- The changed file is a config file (`.yml`, `.xml`, `.json`) that defines routing, events, or listeners
+- The diff shows a function signature change — read the full file to find all callers
+- The diff introduces a new event name or constant — read listener config files to verify wiring
+- Total lines in the file is < 500 (skip very large files; note them instead)
+
+**Skip full-file reads for:**
+- Pure frontend assets (`.js`, `.css`) unless the diff shows a logic bug worth deeper inspection
+- Lock files, generated files, vendor files
+- Files > 500 lines unless a `CRITICAL` diff finding warrants it
+
+For each full file read, look for:
+- **Callers of changed functions**: does any other code in the file call the function with the old signature?
+- **Missing interface implementations**: does the class fully implement its interface after the change?
+- **Dead event listeners**: are all events declared in config actually fired somewhere?
+- **Incomplete switch/match statements**: are all cases handled after the change?
+- **Dependency injection issues**: are all constructor/container dependencies available?
+
 ---
 
 ## Step 3 — Fetch Sentry Issues
 
 Use the **Bash tool** with `sentry-cli` to query the self-hosted Sentry instance.
 
-The OMS project is a **single project** (`oms`) shared across all ventures. Ventures are distinguished by the `country` tag. The `{venture_lower}` is the lowercase venture code (e.g. `my`, `id`, `ph`, `au`).
+Each repo has its own Sentry project (see Repo Config Table). Ventures are distinguished by the `country` tag. The `{venture_lower}` is the lowercase venture code (e.g. `my`, `id`, `ph`, `au`).
 
 ### 3a — Discover Org Slug (if SENTRY_ORG not set)
 
@@ -224,16 +276,8 @@ Save the org slug as `{org_slug}` (e.g. `zalora`). Set `SENTRY_ORG={org_slug}` f
 
 ```bash
 sentry-cli --url $SENTRY_URL --auth-token $SENTRY_AUTH_TOKEN \
-  issues -o $SENTRY_ORG -p oms list \
+  issues -o $SENTRY_ORG -p {SENTRY_PROJECT} list \
   --query "is:unresolved country:{venture_lower}" \
-  --max-rows 25
-```
-
-Example for MY:
-```bash
-sentry-cli --url https://sentry-stg.zalora.net --auth-token $SENTRY_AUTH_TOKEN \
-  issues -o zalora -p oms list \
-  --query "is:unresolved country:my" \
   --max-rows 25
 ```
 
@@ -242,22 +286,24 @@ If the `--query` filter flag is not supported, fall back to the REST API via cur
 ```bash
 curl -s \
   -H "Authorization: Bearer $SENTRY_AUTH_TOKEN" \
-  "$SENTRY_URL/api/0/projects/$SENTRY_ORG/oms/issues/?query=is:unresolved+country:{venture_lower}&sort=date&limit=25&start={ISO_TIMESTAMP_24H_AGO}"
+  "$SENTRY_URL/api/0/projects/$SENTRY_ORG/{SENTRY_PROJECT}/issues/?query=is:unresolved+country:{venture_lower}&sort=date&limit=25&start={ISO_TIMESTAMP_24H_AGO}"
 ```
 
 Use 24h ago as default for `start`, or since the timestamp of the most recent merged PR if available.
 
 ### 3c — Apply Ignore List
 
-Before processing results, load the ignore list from the skill's base directory:
+Before processing results, load the repo-specific ignore list from the skill's base directory:
 
 ```
-{SKILL_BASE_DIR}/sentry-ignore.txt
+{SKILL_BASE_DIR}/{SENTRY_IGNORE_FILE}
 ```
 
 Read the file using the Read tool. Skip lines starting with `#` and blank lines. For each remaining line (a keyword/pattern), **exclude any Sentry issue whose title contains that string** (case-insensitive match).
 
-Show a note in the report: `N issues filtered by ignore list (sentry-ignore.txt)`
+Show a note in the report: `N issues filtered by ignore list ({SENTRY_IGNORE_FILE})`
+
+If the ignore file does not exist, skip filtering and note it in the report.
 
 Extract for each **non-ignored** issue:
 - Issue ID, title (exact — do not paraphrase)
@@ -318,8 +364,9 @@ Present a clean health report:
 
 ---
 
-## OMS Staging Health Check — {VENTURE} (`{BRANCH}`)
+## Staging Health Check — {REPO_KEY} / {VENTURE} (`{BRANCH}`)
 **Checked at**: {timestamp}
+**Repo**: `{GITHUB_REPO}`  |  **Sentry project**: `{SENTRY_PROJECT}`
 **Data sources**: GitHub MCP ✓ / REST API ✓  |  Sentry CLI ✓
 
 ---
@@ -390,8 +437,8 @@ If diff is too large (>300 lines): "Diff too large to review inline — {N} line
 ## Important Notes
 
 - **Always show raw Sentry error titles** — exact messages help developers grep the codebase
-- If GitHub MCP is available but token has no access to private repo `zalora/oms`, it will return 404 — guide user to ensure the token has `repo` scope
-- If Sentry returns 0 issues, explicitly confirm: "No new issues in Sentry for the last 24h on {venture}" — do not silently skip
+- If GitHub MCP is available but token has no access to the private repo, it will return 404 — guide user to ensure the token has `repo` scope
+- If Sentry returns 0 issues, explicitly confirm: "No new issues in Sentry for the last 24h on {REPO_KEY}/{VENTURE}" — do not silently skip
 - If the user asks for a custom time window (e.g. "last 2 hours"), apply it to both GitHub (filter commits by date) and Sentry (`start` param)
 - Never speculate beyond what data shows — if data is missing, say clearly which source failed and why
 - If both MCP and REST fail for GitHub, ask the user to paste recent commits manually
