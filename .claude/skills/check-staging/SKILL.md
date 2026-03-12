@@ -30,92 +30,75 @@ All three repos use the same venture-to-branch mapping: `development-{VENTURE}` 
 
 ## Step 0 — Check MCP & Auth Setup
 
-Before fetching data, verify that the required integrations are set up. Check which tools are available and guide the user if anything is missing.
+Before fetching data, load credentials and verify integrations are available.
 
-### GitHub MCP
+### 0a — Load credentials from .env
+
+**Always attempt to load from `.env` first** before checking env vars. Use the Bash tool:
+
+```bash
+# Load .env if present in the project root
+if [ -f /Users/khoinguyen/project/oms_tool/.env ]; then
+  export $(grep -v '^#' /Users/khoinguyen/project/oms_tool/.env | grep -E '^(GITHUB_TOKEN|SENTRY_URL|SENTRY_AUTH_TOKEN|SENTRY_ORG)=' | xargs)
+fi
+echo "GITHUB_TOKEN=${GITHUB_TOKEN:+set}" && echo "SENTRY_URL=${SENTRY_URL}" && echo "SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN:+set}" && echo "SENTRY_ORG=${SENTRY_ORG}"
+```
+
+If the `.env` file exists and contains the keys, proceed silently without prompting the user for credentials.
+
+### 0b — GitHub MCP
 
 Check if `mcp__github__*` tools are available (e.g. `mcp__github__list_commits`).
 
-**If GitHub MCP is NOT available**, show this setup guide:
+- If GitHub MCP **is available** → use MCP tools (preferred)
+- If GitHub MCP **is NOT available** but `GITHUB_TOKEN` is set (from `.env` or env) → use REST API fallback silently
+- If neither → show setup guide below
+
+**Setup guide (only show if no GitHub access at all):**
 
 ---
-> **GitHub MCP is not connected.** It gives richer access to PRs, commits, and file diffs.
->
-> **Option A — Remote MCP (recommended, no install needed):**
+> **GitHub access not found.** Add your token to `.env`:
+> ```
+> GITHUB_TOKEN=ghp_YOUR_TOKEN
+> ```
+> Or connect via MCP (recommended for richer access):
 > ```bash
 > claude mcp add --transport http github https://api.githubcopilot.com/mcp/
 > ```
-> Then restart Claude Code. You'll be prompted to authenticate via GitHub OAuth.
->
-> **Option B — Local via Docker:**
-> ```bash
-> # First generate a token at: https://github.com/settings/tokens
-> # Scopes needed: repo, read:org
-> claude mcp add github -s user \
->   -e GITHUB_PERSONAL_ACCESS_TOKEN=ghp_YOUR_TOKEN \
->   -- docker run -i --rm \
->   -e GITHUB_PERSONAL_ACCESS_TOKEN \
->   ghcr.io/github/github-mcp-server
-> ```
->
-> **Option C — Local via npx:**
-> ```bash
-> GITHUB_PERSONAL_ACCESS_TOKEN=ghp_YOUR_TOKEN \
-> claude mcp add github -s user \
->   -- npx -y @modelcontextprotocol/server-github
-> ```
->
-> After adding, run `claude mcp list` to confirm, then **restart Claude Code**.
->
-> **Fallback**: If you prefer not to install MCP, export your token and I'll use the REST API:
-> ```bash
-> export GITHUB_TOKEN=ghp_YOUR_TOKEN
-> ```
 
 ---
 
-### Sentry Connection
+### 0c — Sentry Connection
 
-Sentry (`sentry-stg.zalora.net`) is self-hosted. We use **`sentry-cli`** (brew) to interact with it.
-
-Use the Bash tool to check if `sentry-cli` is installed:
+Check if `sentry-cli` is installed:
 ```bash
 which sentry-cli && sentry-cli --version
 ```
 
-**If `sentry-cli` is NOT installed**, show this guide:
+- If installed and credentials loaded from `.env` → proceed silently
+- If not installed → show install guide
+
+**Install guide (only show if sentry-cli missing):**
 
 ---
-> **Install sentry-cli via Homebrew:**
 > ```bash
 > brew install getsentry/tools/sentry-cli
 > ```
-> After installing, set up your credentials:
-> ```bash
-> export SENTRY_URL=https://sentry-stg.zalora.net
-> export SENTRY_AUTH_TOKEN=sntrys_YOUR_TOKEN
-> export SENTRY_ORG=YOUR_ORG_SLUG   # e.g. "zalora"
-> # Add to ~/.zshrc or ~/.bashrc to persist
+> Then add to `.env`:
 > ```
-> To get a token:
-> 1. Go to: `https://sentry-stg.zalora.net/settings/account/api/auth-tokens/`
-> 2. Click **"Create New Token"** with scopes: `project:read`, `event:read`, `org:read`
+> SENTRY_URL=https://sentry-stg.zalora.net
+> SENTRY_AUTH_TOKEN=sntrys_YOUR_TOKEN
+> SENTRY_ORG=zalora
+> ```
 
 ---
 
-**If `sentry-cli` IS installed**, check that the required env vars are set:
-```bash
-echo "SENTRY_URL=${SENTRY_URL}" && echo "SENTRY_AUTH_TOKEN=${SENTRY_AUTH_TOKEN:+set}" && echo "SENTRY_ORG=${SENTRY_ORG}"
-```
-
-If `SENTRY_ORG` is not set, discover it:
+If `SENTRY_ORG` is not set after loading `.env`, discover it:
 ```bash
 sentry-cli --url $SENTRY_URL --auth-token $SENTRY_AUTH_TOKEN organizations list
 ```
 
----
-
-If both GitHub and Sentry are missing, **stop here** and ask the user to complete setup before proceeding. If at least GitHub is available, proceed and skip the Sentry section with a note.
+**If both GitHub and Sentry are unavailable**, stop and ask the user to add credentials to `.env`. If at least GitHub is available, proceed and skip the Sentry section with a note.
 
 ---
 
