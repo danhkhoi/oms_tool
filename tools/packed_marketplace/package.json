@@ -1,0 +1,13 @@
+{
+  "name": "packed_marketplace",
+  "version": "1.0.0",
+  "description": "Call setStatusToPackedByMarketplaceV2 API for a list of order item IDs",
+  "main": "packed_marketplace.js",
+  "scripts": {
+    "start": "node packed_marketplace.js",
+    "dry-run": "node packed_marketplace.js --dry-run"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}

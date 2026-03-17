@@ -1,0 +1,13 @@
+{
+  "name": "shipped",
+  "version": "1.0.0",
+  "description": "Call setStatusToShippedV2 API for a list of order item IDs",
+  "main": "shipped.js",
+  "scripts": {
+    "start": "node shipped.js",
+    "dry-run": "node shipped.js --dry-run"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}

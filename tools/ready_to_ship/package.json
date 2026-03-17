@@ -1,0 +1,13 @@
+{
+  "name": "ready_to_ship",
+  "version": "1.0.0",
+  "description": "Call setStatusToReadyToShip API for a list of order item IDs",
+  "main": "ready_to_ship.js",
+  "scripts": {
+    "start": "node ready_to_ship.js",
+    "dry-run": "node ready_to_ship.js --dry-run"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
