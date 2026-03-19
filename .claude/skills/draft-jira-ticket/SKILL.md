@@ -25,7 +25,6 @@ The input may be:
 This file contains:
 - `default_component` — pre-fill the component field if set (e.g. `"Warehouse"`)
 - `default_squad` — pre-fill the squad field if set (e.g. `"Logistics"`)
-- `default_ventures` — which ventures are affected by default (`true` = affected)
 - `default_platforms` — list of platforms affected by default
 - `components` / `squads` / `priorities` — ID lookup tables (use these instead of hardcoded values)
 - `jira.cloud_id`, `jira.project_key`, `jira.base_url` — Jira connection config
@@ -33,7 +32,6 @@ This file contains:
 **Behavior:**
 - If `default_component` is set, use it as the pre-selected component (still confirm with user)
 - If `default_squad` is set, use it as the pre-selected squad (still confirm with user)
-- If `default_ventures` has any `true` entries, pre-tick those ventures in the template
 - If `default_platforms` is non-empty, pre-select those platforms in the template
 - Always resolve component/squad/priority IDs from the settings file lookup tables
 
@@ -47,7 +45,7 @@ When setup mode is triggered, run this flow:
 
 ### Option A — Learn from an existing ticket (recommended)
 
-Ask: *"Do you have a recent SEAOPS ticket key I can learn your defaults from? (e.g. SEAOPS-1234)"*
+Ask: *"Do you have a recent ticket key I can learn your defaults from? (e.g. XXXX-1234)"*
 
 If the user provides a ticket key:
 1. Fetch the ticket using `mcp__atlassian__getJiraIssue` with `cloudId` and `issueIdOrKey`
@@ -55,15 +53,18 @@ If the user provides a ticket key:
    - `fields.components[0].name` → candidate `default_component`
    - `fields.customfield_12912.value` → candidate `default_squad`
    - `fields.labels` → note any recurring labels
+   - Affected platforms mentioned in description → candidate `default_platforms`
+   - Project context clues (product area, system names) → enrich the project understanding
 3. Show a summary:
    ```
-   From ticket SEAOPS-XXXX I found:
-   - Component: <component>
-   - Squad:     <squad>
+   From ticket XXXX-XXXX I found:
+   - Component:  <component>
+   - Squad:      <squad>
+   - Platforms:  <platforms mentioned in ticket, e.g. OMS Application, Bob>
 
    Save these as your defaults? (yes / change / skip)
    ```
-4. On confirmation, write to settings.json
+4. On confirmation, write to settings.json — update `default_component`, `default_squad`, and `default_platforms`
 
 ### Option B — Manual selection
 
@@ -103,8 +104,9 @@ After selection, confirm and write to settings.json.
 Update `.claude/skills/draft-jira-ticket/settings.json`:
 - Set `default_component` to the chosen component name
 - Set `default_squad` to the chosen squad name
+- Set `default_platforms` to platforms inferred from the ticket
 
-Then confirm: *"Defaults saved. Future tickets will pre-select **[component]** and **[squad]**."*
+Then confirm: *"Defaults saved. Future tickets will pre-select **[component]**, **[squad]**, and platforms **[platforms]**."*
 
 ---
 
