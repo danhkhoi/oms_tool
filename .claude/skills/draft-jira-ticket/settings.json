@@ -1,0 +1,62 @@
+{
+  "_comment": "Default settings for draft-jira-ticket skill. Edit these to match your team's defaults.",
+
+  "default_component": "Iconic OWMS SaaS",
+  "default_squad": "Iconic OWMS SaaS",
+
+  "components": {
+    "Warehouse": "16505",
+    "Logistics": "16506",
+    "Supply Chain": "16507",
+    "Production": "16508",
+    "Customer Service & Experience": "16509",
+    "Marketplace": "16510",
+    "Payment": "16511",
+    "One Stock Solution (1SS)": "16569",
+    "Technical": "16530",
+    "Strategic OKR": "16532",
+    "Security": "16531",
+    "Bumblebee": "16534",
+    "Finance": "16694",
+    "Iconic OWMS SaaS": "16693"
+  },
+
+  "squads": {
+    "Warehouse & Supply Chain": "11513",
+    "Logistics": "11511",
+    "Production": "11526",
+    "Technical Reinvent": "11717",
+    "Iconic OWMS SaaS": "12107",
+    "Post Purchase": "11522",
+    "Marketplace": "11510",
+    "Storefront": "11520"
+  },
+
+  "priorities": {
+    "P0 - Blocker": "1",
+    "P1 - Critical": "2",
+    "P2 - Major": "3",
+    "P3 - Minor": "4",
+    "P4 - Trivial": "5"
+  },
+
+  "default_ventures": {
+    "OMS MY": false,
+    "OMS SG": false,
+    "OMS ID": false,
+    "OMS PH": false,
+    "OMS TH": false,
+    "OMS HK": false,
+    "OMS TW": false,
+    "OMS AU": false
+  },
+
+  "default_platforms": [],
+
+  "jira": {
+    "cloud_id": "c5ab62f0-1109-4f2e-b41d-d917b58ee31f",
+    "project_key": "SEAOPS",
+    "project_id": "12000",
+    "base_url": "https://zalora.atlassian.net"
+  }
+}

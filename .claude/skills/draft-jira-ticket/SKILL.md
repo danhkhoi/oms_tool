@@ -18,13 +18,93 @@ The input may be:
 - A bug from Sentry, APM, or a debug log
 - An existing JIRA ticket (enrich and rewrite in easy-to-understand language)
 
-## Config Cache
+## Settings File
 
-All Jira IDs are cached in `docs/jira/jira-config.json` (relative to the oms_tool project root).
+**Always read `.claude/skills/draft-jira-ticket/settings.json` at the start of every skill invocation.**
 
-Key cached values (use these directly, no need to look up):
-- **Cloud ID**: `c5ab62f0-1109-4f2e-b41d-d917b58ee31f`
-- **Project Key**: `SEAOPS` (Project ID: `12000`)
+This file contains:
+- `default_component` — pre-fill the component field if set (e.g. `"Warehouse"`)
+- `default_squad` — pre-fill the squad field if set (e.g. `"Logistics"`)
+- `default_ventures` — which ventures are affected by default (`true` = affected)
+- `default_platforms` — list of platforms affected by default
+- `components` / `squads` / `priorities` — ID lookup tables (use these instead of hardcoded values)
+- `jira.cloud_id`, `jira.project_key`, `jira.base_url` — Jira connection config
+
+**Behavior:**
+- If `default_component` is set, use it as the pre-selected component (still confirm with user)
+- If `default_squad` is set, use it as the pre-selected squad (still confirm with user)
+- If `default_ventures` has any `true` entries, pre-tick those ventures in the template
+- If `default_platforms` is non-empty, pre-select those platforms in the template
+- Always resolve component/squad/priority IDs from the settings file lookup tables
+
+---
+
+## Setup Mode — Configure Default Settings
+
+**Trigger:** User says "setup", "configure defaults", "set default squad/component", or `default_component` / `default_squad` are empty in settings.json.
+
+When setup mode is triggered, run this flow:
+
+### Option A — Learn from an existing ticket (recommended)
+
+Ask: *"Do you have a recent SEAOPS ticket key I can learn your defaults from? (e.g. SEAOPS-1234)"*
+
+If the user provides a ticket key:
+1. Fetch the ticket using `mcp__atlassian__getJiraIssue` with `cloudId` and `issueIdOrKey`
+2. Extract from the ticket:
+   - `fields.components[0].name` → candidate `default_component`
+   - `fields.customfield_12912.value` → candidate `default_squad`
+   - `fields.labels` → note any recurring labels
+3. Show a summary:
+   ```
+   From ticket SEAOPS-XXXX I found:
+   - Component: <component>
+   - Squad:     <squad>
+
+   Save these as your defaults? (yes / change / skip)
+   ```
+4. On confirmation, write to settings.json
+
+### Option B — Manual selection
+
+If the user skips Option A or has no ticket, present a numbered menu:
+
+```
+Select your default Component:
+ 1. Warehouse
+ 2. Logistics
+ 3. Supply Chain
+ 4. Production
+ 5. Customer Service & Experience
+ 6. Marketplace
+ 7. Payment
+ 8. One Stock Solution (1SS)
+ 9. Technical
+10. Strategic OKR
+11. Security
+12. Bumblebee
+13. Finance
+14. Iconic OWMS SaaS
+
+Select your default Squad:
+ 1. Warehouse & Supply Chain
+ 2. Logistics
+ 3. Production
+ 4. Technical Reinvent
+ 5. Iconic OWMS SaaS
+ 6. Post Purchase
+ 7. Marketplace / Storefront
+```
+
+After selection, confirm and write to settings.json.
+
+### Saving defaults
+
+Update `.claude/skills/draft-jira-ticket/settings.json`:
+- Set `default_component` to the chosen component name
+- Set `default_squad` to the chosen squad name
+
+Then confirm: *"Defaults saved. Future tickets will pre-select **[component]** and **[squad]**."*
 
 ---
 
@@ -79,112 +159,115 @@ Ask the user (or infer from context) for:
 
 Use the correct template based on ticket type:
 
-### Bug Template (JIRA markup):
+### Bug Template (Markdown):
 ```
-h2. Background
+## Background
 {describe the issue and the impact it has caused}
 
-h2. Steps to reproduce
-# Step 1
-# Step 2
-# Step 3
+## Steps to reproduce
+1. Step 1
+2. Step 2
+3. Step 3
 
-h2. Found
+## Found
 {what actually happens — include screenshots if available}
 
-h2. Expected
+## Expected
 {what should happen}
 
-h2. QA notes
+## QA notes
 {edge cases and testing criteria — be detailed, more is better}
 
-|| Test Case || Description || Test Data || Result ||
+| Test Case | Description | Test Data | Result |
+|-----------|-------------|-----------|--------|
 | TC-01 | {test case description} | {test data} | {expected result} |
 
-h2. Example
+## Example
 {affected examples with country indicated}
 
 Reproduction rate: {X%}
 ```
 
-### New Feature / Improvement / Epic / Task Template (JIRA markup):
+### New Feature / Improvement / Epic / Task Template (Markdown):
 ```
-h2. Motivation
+## Motivation
 {why we are doing this — what problem does it solve}
 
-h2. Business Impact
+## Business Impact
 {business value and measurable outcomes}
 
-h2. User Story Statement
+## User Story Statement
 As a [user type], I want [goal] so that [reason].
 
-h2. User Interaction / Design / User Flow
+## User Interaction / Design / User Flow
 {wireframes, flows, links to design files}
 
-h2. Functional Requirements and Developer Notes
+## Functional Requirements and Developer Notes
 {detailed requirements and technical notes}
 
-h2. QA Notes
+## QA Notes
 {acceptance criteria, edge cases, test scenarios}
 
-|| Test Case || Description || Test Data || Result ||
+| Test Case | Description | Test Data | Result |
+|-----------|-------------|-----------|--------|
 | TC-01 | {test case description} | {test data} | {expected result} |
 
-h2. Not in Scope / Questions and Answers
+## Not in Scope / Questions and Answers
 {what is excluded, open questions and their answers}
 
-h2. Links and References
+## Links and References
 {full URLs only — related docs, tickets, Confluence pages}
 
-h2. Affected Ventures and Warehouses
-|| Venture || Affected? ||
-| OMS MY | (x) |
-| OMS SG | (x) |
-| OMS ID | (x) |
-| OMS PH | (x) |
-| OMS TH | (x) |
-| OMS HK | (x) |
-| OMS TW | (x) |
-| OMS AU | (x) |
+## Affected Ventures and Warehouses
+| Venture | Affected? |
+|---------|-----------|
+| OMS MY | No |
+| OMS SG | No |
+| OMS ID | No |
+| OMS PH | No |
+| OMS TH | No |
+| OMS HK | No |
+| OMS TW | No |
+| OMS AU | No |
 
 Feature flag required? Yes / No
 
-h2. Affected Platforms
+## Affected Platforms
 {list only affected platforms from: Alice, Bob, Marketplace / Seller Center, Web Mobile, iOS Mobile App, Android Mobile App, OMS Web Mobile, OMS Application, ZOPS, Costa, Delivery Module, Fareye, Aftership, Delivery API / 3rd Party Logistics / Bumblebee, SAP, Stock Service, Product Service, FLASH}
 ```
 
-### Investigation Template (JIRA markup):
+### Investigation Template (Markdown):
 ```
-h2. Background
+## Background
 {describe the error/incident and its impact on the system or users}
 
-h2. Error Details
-- *Error message:* {error message or stack trace}
-- *Timestamp:* {when it occurred}
-- *Affected service:* {service/component}
-- *Frequency:* {how often it occurs}
-- *Environment:* {production/staging/etc.}
+## Error Details
+- **Error message:** {error message or stack trace}
+- **Timestamp:** {when it occurred}
+- **Affected service:** {service/component}
+- **Frequency:** {how often it occurs}
+- **Environment:** {production/staging/etc.}
 
-h2. Initial Analysis
+## Initial Analysis
 {quick assessment of likely root cause based on error logs}
 
-h2. Investigation Scope
-* What needs to be investigated
-* Which systems/services are involved
-* Data/logs that need to be analyzed
+## Investigation Scope
+- What needs to be investigated
+- Which systems/services are involved
+- Data/logs that need to be analyzed
 
-h2. Expected Outcome
+## Expected Outcome
 {One of:
 1. Root cause identified + quick fix applied (if simple, < 3 points)
 2. Root cause identified + new ticket(s) raised for proper fix (if >= 5 points)
 3. Conclusion with recommendations for next steps}
 
-h2. QA Notes
-* How to verify investigation findings
-* Test scenarios to confirm root cause
-* Validation steps if quick fix is applied
+## QA Notes
+- How to verify investigation findings
+- Test scenarios to confirm root cause
+- Validation steps if quick fix is applied
 
-h2. Links and References
+## Links and References
 {full URLs to: Sentry/APM error links, monitoring dashboards, similar past incidents}
 ```
 
@@ -234,16 +317,9 @@ Search the knowledge base (Confluence/Jira) for related tickets and documentatio
 Present the full draft to the user:
 
 1. **Ticket fields**: Summary, Type, Priority, Component, Squad, Labels, Epic Link
-2. **Description**: Filled template in JIRA markup
+2. **Description**: Filled template in markdown
 3. **Estimated Story Points**: With rationale
 4. **Knowledge base findings**: Questions, concerns, improvements
-5. **Markdown copy block**: Provide the description content (from Motivation/Background section to end, excluding Labels) in a markdown code block for easy copying:
-
-```markdown
-## Background / Motivation
-...
-(full content through last section, excluding Labels)
-```
 
 Ask: **"Shall I create this ticket in Jira?"**
 
@@ -259,7 +335,7 @@ Use `mcp__atlassian__createJiraIssue` with:
   "projectKey": "SEAOPS",
   "issueTypeName": "<type>",
   "summary": "<summary>",
-  "description": "<filled description in JIRA markup>",
+  "description": "<filled description in markdown>",
   "additional_fields": {
     "components": [{"id": "<component_id>"}],
     "customfield_12912": {"id": "<squad_option_id>"},
@@ -270,37 +346,7 @@ Use `mcp__atlassian__createJiraIssue` with:
 }
 ```
 
-**Component IDs**:
-- Warehouse: `16505`
-- Logistics: `16506`
-- Supply Chain: `16507`
-- Production: `16508`
-- Customer Service & Experience: `16509`
-- Marketplace: `16510`
-- Payment: `16511`
-- One Stock Solution (1SS): `16569`
-- Technical: `16530`
-- Strategic OKR: `16532`
-- Security: `16531`
-- Bumblebee: `16534`
-- Finance: `16694`
-- Iconic OWMS SaaS: `16693`
-
-**Priority IDs**:
-- P0 - Blocker: `1`
-- P1 - Critical: `2`
-- P2 - Major: `3`
-- P3 - Minor: `4`
-- P4 - Trivial: `5`
-
-**Squad Option IDs** (customfield_12912):
-- Warehouse & Supply Chain: `11513`
-- Logistics: `11511`
-- Production: `11526`
-- Technical Reinvent: `11717`
-- Iconic OWMS SaaS: `12107`
-- Post Purchase: `11522`
-- Marketplace: `11510` *(use Storefront: `11520` if in doubt)*
+**Component IDs**, **Priority IDs**, and **Squad Option IDs** — read from `.claude/skills/draft-jira-ticket/settings.json` (keys: `components`, `priorities`, `squads`).
 
 ---
 
@@ -324,7 +370,7 @@ After creation, return the ticket URL:
 - For error/log input → default to **Investigation** ticket type
 - For Investigation tickets: if fix requires ≥ 5 points, suggest creating a separate Bug/Task ticket and link them with "Causes" / "Is caused by"
 - If input is an existing ticket, **enrich and rewrite** it in clear, easy-to-understand language
-- Always provide the markdown copy block in a code block (from Background/Motivation to end, excluding Labels section)
+- Description content must be written in markdown (not JIRA markup)
 
 ## Project Context
 
