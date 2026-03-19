@@ -1,8 +1,31 @@
 {
   "_comment": "Default settings for draft-jira-ticket skill. Edit these to match your team's defaults.",
 
+  "default_project": "SEAOPS",
   "default_component": "Iconic OWMS SaaS",
   "default_squad": "Iconic OWMS SaaS",
+  "default_platforms": [],
+
+  "projects": {
+    "SEAOPS": {
+      "cloud_id": "c5ab62f0-1109-4f2e-b41d-d917b58ee31f",
+      "project_key": "SEAOPS",
+      "project_id": "12000",
+      "base_url": "https://zalora.atlassian.net",
+      "name": "OMS (OWMS)",
+      "uses_components": true,
+      "uses_squad": true
+    },
+    "B2BMCP": {
+      "cloud_id": "c5ab62f0-1109-4f2e-b41d-d917b58ee31f",
+      "project_key": "B2BMCP",
+      "project_id": "14250",
+      "base_url": "https://zalora.atlassian.net",
+      "name": "B2B Multi Channel Platform",
+      "uses_components": false,
+      "uses_squad": false
+    }
+  },
 
   "components": {
     "Warehouse": "16505",
@@ -38,25 +61,5 @@
     "P2 - Major": "3",
     "P3 - Minor": "4",
     "P4 - Trivial": "5"
-  },
-
-  "default_ventures": {
-    "OMS MY": false,
-    "OMS SG": false,
-    "OMS ID": false,
-    "OMS PH": false,
-    "OMS TH": false,
-    "OMS HK": false,
-    "OMS TW": false,
-    "OMS AU": false
-  },
-
-  "default_platforms": [],
-
-  "jira": {
-    "cloud_id": "c5ab62f0-1109-4f2e-b41d-d917b58ee31f",
-    "project_key": "SEAOPS",
-    "project_id": "12000",
-    "base_url": "https://zalora.atlassian.net"
   }
 }

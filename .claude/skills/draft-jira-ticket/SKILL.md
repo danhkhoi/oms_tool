@@ -1,15 +1,17 @@
 ---
 name: draft-jira-ticket
-description: Draft and create a Jira ticket for OMS (SEAOPS) following the official OMS Ticket Template from Confluence. Use when asked to "draft a jira ticket", "create a jira ticket", "raise a ticket", or "log a bug/feature/task in jira". Supports Bug, New Feature, Improvement, Task, Epic, Tech Spike, Investigation types. Uses Atlassian MCP to create the ticket directly.
+description: Draft and create a Jira ticket for OWMS (SEAOPS) or B2B Multi Channel Platform (B2BMCP) following the official OMS Ticket Template. Use when asked to "draft a jira ticket", "create a jira ticket", "raise a ticket", or "log a bug/feature/task in jira". Supports Bug, New Feature, Improvement, Task, Epic, Tech Spike, Investigation types. Uses Atlassian MCP to create the ticket directly.
 license: MIT
 metadata:
   author: oms-tool
   version: "2.0.0"
 ---
 
-# Draft OMS Jira Ticket
+# Draft Jira Ticket — OWMS (SEAOPS) or B2BMCP
 
-You are helping draft and create a Jira ticket for the OMS project (SEAOPS) following the official OMS Ticket Template.
+You are helping draft and create a Jira ticket for either:
+- **SEAOPS** — OMS/OWMS (Order Management System / Warehouse Management)
+- **B2BMCP** — B2B Multi Channel Platform (brand integrations, order sync, logistics messaging)
 
 The input may be:
 - A support ticket from Freshdesk
@@ -23,15 +25,18 @@ The input may be:
 **Always read `.claude/skills/draft-jira-ticket/settings.json` at the start of every skill invocation.**
 
 This file contains:
-- `default_component` — pre-fill the component field if set (e.g. `"Warehouse"`)
-- `default_squad` — pre-fill the squad field if set (e.g. `"Logistics"`)
+- `default_project` — which project to use by default (`"SEAOPS"` or `"B2BMCP"`)
+- `default_component` — pre-fill the component field (SEAOPS only)
+- `default_squad` — pre-fill the squad field (SEAOPS only)
 - `default_platforms` — list of platforms affected by default
-- `components` / `squads` / `priorities` — ID lookup tables (use these instead of hardcoded values)
-- `jira.cloud_id`, `jira.project_key`, `jira.base_url` — Jira connection config
+- `projects` — config map for each project (cloud_id, project_key, project_id, base_url, uses_components, uses_squad)
+- `components` / `squads` / `priorities` — ID lookup tables for SEAOPS (use these instead of hardcoded values)
 
 **Behavior:**
-- If `default_component` is set, use it as the pre-selected component (still confirm with user)
-- If `default_squad` is set, use it as the pre-selected squad (still confirm with user)
+- **Auto-detect project** from context: OMS/OWMS/warehouse/Luna/picklist/batch keywords → `SEAOPS`; B2B/brand/Olivia/GSC/S217/integration keywords → `B2BMCP`. If unclear, ask.
+- If user explicitly mentions a project key (SEAOPS-xxx or B2BMCP-xxx), use that project
+- For **SEAOPS**: use `default_component` and `default_squad` as pre-selections (still confirm with user); include Component and Squad fields in the ticket
+- For **B2BMCP**: skip Component and Squad fields — this project does not use them
 - If `default_platforms` is non-empty, pre-select those platforms in the template
 - Always resolve component/squad/priority IDs from the settings file lookup tables
 
@@ -329,8 +334,9 @@ Ask: **"Shall I create this ticket in Jira?"**
 
 ## Step 7 — Create via MCP
 
-Use `mcp__atlassian__createJiraIssue` with:
+Use `mcp__atlassian__createJiraIssue`. Read `cloudId` and `projectKey` from `settings.json` → `projects.<project>`.
 
+**For SEAOPS** (uses components + squad):
 ```json
 {
   "cloudId": "c5ab62f0-1109-4f2e-b41d-d917b58ee31f",
@@ -338,17 +344,33 @@ Use `mcp__atlassian__createJiraIssue` with:
   "issueTypeName": "<type>",
   "summary": "<summary>",
   "description": "<filled description in markdown>",
+  "contentFormat": "markdown",
   "additional_fields": {
     "components": [{"id": "<component_id>"}],
     "customfield_12912": {"id": "<squad_option_id>"},
     "priority": {"id": "<priority_id>"},
-    "labels": ["<label>"],
-    "duedate": "<YYYY-MM-DD>"
+    "labels": ["<label>"]
   }
 }
 ```
 
-**Component IDs**, **Priority IDs**, and **Squad Option IDs** — read from `.claude/skills/draft-jira-ticket/settings.json` (keys: `components`, `priorities`, `squads`).
+**For B2BMCP** (no components or squad):
+```json
+{
+  "cloudId": "c5ab62f0-1109-4f2e-b41d-d917b58ee31f",
+  "projectKey": "B2BMCP",
+  "issueTypeName": "<type>",
+  "summary": "<summary>",
+  "description": "<filled description in markdown>",
+  "contentFormat": "markdown",
+  "additional_fields": {
+    "priority": {"id": "<priority_id>"},
+    "labels": ["<label>"]
+  }
+}
+```
+
+**Component IDs**, **Priority IDs**, and **Squad Option IDs** — read from `settings.json` (keys: `components`, `priorities`, `squads`). Only apply to SEAOPS tickets.
 
 ---
 
@@ -356,6 +378,8 @@ Use `mcp__atlassian__createJiraIssue` with:
 
 After creation, return the ticket URL:
 `https://zalora.atlassian.net/browse/<ISSUE_KEY>`
+
+The issue key prefix will match the project: `SEAOPS-XXXX` or `B2BMCP-XXXX`.
 
 ---
 
@@ -389,3 +413,17 @@ After creation, return the ticket URL:
 **Stock Service:** Inventory management service.
 
 **Product Service:** Product catalog and information service. *(Skip knowledge base enrichment for this platform.)*
+
+---
+
+## B2BMCP Project Context
+
+**B2B Multi Channel Platform (B2BMCP):** System that integrates Zalora with external brands (e.g. H&M) for order fulfillment, returns, and logistics message exchange.
+
+**Olivia:** Core B2BMCP service that processes order events from Kinesis and sends structured messages (e.g. S217) to brand systems.
+
+**GSC (Global Stock Connect):** External brand API for stock and product sync (e.g. H&M).
+
+**Helios:** Internal event trigger system that feeds Olivia with order lifecycle events.
+
+**S217:** A standardized return message format sent to brands upon customer return events.
